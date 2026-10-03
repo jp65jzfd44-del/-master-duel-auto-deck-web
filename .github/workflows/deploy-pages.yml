@@ -74,7 +74,17 @@ jobs:
         run: |
           set -euxo pipefail
           sed -i 's/md-auto-deck-pwa-v[0-9][0-9]*/md-auto-deck-pwa-v4/g' _site/sw.js
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('_site/sw.js')
+          s=p.read_text(encoding='utf-8')
+          if "'./guide-v4.css'" not in s:
+              s=s.replace("'./default-regulation.json', './manifest.webmanifest', './icon.svg'",
+                          "'./default-regulation.json', './manifest.webmanifest', './icon.svg', './guide-v4.css', './guide-v4.js'")
+          p.write_text(s,encoding='utf-8')
+          PY
           grep "const CACHE" _site/sw.js
+          grep "guide-v4" _site/sw.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
