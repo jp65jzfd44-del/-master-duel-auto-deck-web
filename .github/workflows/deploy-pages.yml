@@ -137,7 +137,7 @@ jobs:
       - name: Refresh PWA cache version
         run: |
           set -euxo pipefail
-          sed -i 's/md-auto-deck-pwa-v[0-9][0-9]*/md-auto-deck-pwa-v8/g' _site/sw.js
+          sed -i 's/md-auto-deck-pwa-v[0-9][0-9]*/md-auto-deck-pwa-v9/g' _site/sw.js
           python3 - <<'PY'
           from pathlib import Path
           p=Path('_site/sw.js')
