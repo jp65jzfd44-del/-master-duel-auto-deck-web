@@ -3,6 +3,8 @@
   const $ = id => document.getElementById(id);
   const KEY = 'md_hybrid_builder_v6';
   const INJECT_KEY = 'md_hybrid_injected_v6';
+  let lastContextV6=null;
+  let optimizingV6=false;
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm = s => String(s || '').normalize('NFKC').toLowerCase().replace(/[\s・･ー―‐\-–—_.,，。!！?？「」『』()（）【】\[\]<>＜＞:：/／\\]/g, '');
 
@@ -189,8 +191,75 @@
     const brick=main.reduce((s,e)=>s+(Number(e.card?.level||0)>=7&&!/special summon this card|you can special summon/i.test(String(e.card?.desc||''))?e.qty:0),0);
     const coverage=Math.min(100,Math.round(starters/9*55+inter/7*45));const cohesion=Math.min(100,Math.round(mixed/n/.65*100));const safety=Math.max(0,100-Math.round(brick/n*220));return Math.round(coverage*.4+cohesion*.32+safety*.18+plan.avg*.1);
   }
-  function showBuilt(deck,plan,engineNames){
-    const box=$('hybridAnalysisV6');if(!box||!deck)return;const score=postScore(deck,plan);box.innerHTML += '<div class="hybrid-built-v6"><strong>混合構築完了</strong><br>構築完成度（混合診断・目安）: <b>'+score+'/100</b><br>混ぜたエンジン: '+esc(engineNames.join(' / ')||'自動')+'<br>※勝率ではなく、初動・妨害・テーマ比率・事故札・テーマ間相性を見た内部診断です。</div>';
+  function injectedNamesV6(){try{return JSON.parse(localStorage.getItem(INJECT_KEY)||'[]')}catch{return []}}
+  function deckQtyV6(deck,c){return [...(deck?.main||[]),...(deck?.extra||[])].reduce((n,e)=>n+(String(e.card?.id)===String(c?.id)?e.qty:0),0)}
+  function optimizationCandidatesV6(ctx){
+    const {plan,cs,deck}=ctx, primaryAgg=aggregate(plan.themes[0],cs), st=strategyTags(plan.text);
+    const starters=roleCount(deck?.main||[],/add 1 .* from your deck|search your deck|special summon this card|set 1 .* from your deck/i);
+    const inter=roleCount(deck?.main||[],/negate|take control|banish|destroy|return .* to the hand/i);
+    const pool=[];
+    for(const theme of plan.themes){
+      for(const c of themeCards(theme,cs)){
+        if(isExtra(c))continue;
+        const m=mechanicsForCard(c),q=deckQtyV6(deck,c);
+        if(q>=3||m.lock||m.highBrick)continue;
+        let score=scoreEngineCard(c,theme,plan.text,primaryAgg);
+        if(starters<9&&(m.search||m.self||m.extend))score+=50;
+        if(inter<7&&(m.negate||m.control||m.banish))score+=38;
+        if(st.control&&m.control)score+=32;
+        if(st.extraRip&&m.extraRip)score+=42;
+        if(st.flip&&m.flip)score+=24;
+        if(st.grave&&m.grave)score+=22;
+        if(st.fusion&&m.fusion)score+=18;
+        if(st.xyz&&m.xyz)score+=18;
+        if(theme===plan.themes[0])score+=8;
+        pool.push({c,score,m,q});
+      }
+    }
+    const seen=new Set();
+    return pool.sort((a,b)=>b.score-a.score).filter(x=>{const k=String(x.c.id);if(seen.has(k))return false;seen.add(k);return x.score>=55}).slice(0,4);
+  }
+  async function optimizeHybridV6(ctx){
+    if(!ctx||optimizingV6)return;
+    optimizingV6=true;
+    const box=$('hybridAnalysisV6'),baseScore=postScore(ctx.deck,ctx.plan),prev=injectedNamesV6();
+    const candidates=optimizationCandidatesV6(ctx);
+    if(!candidates.length){
+      if(box)box.innerHTML+='<div class="hybrid-note-v6">再調整候補は見つかりませんでした。現在の構築を維持します。</div>';
+      optimizingV6=false;return;
+    }
+    const added=[];
+    for(const x of candidates.slice(0,3)){
+      added.push(x.c.name||x.c.jp_name);
+      if((x.m.search||x.m.self)&&x.q===0&&added.length<3)added.push(x.c.name||x.c.jp_name);
+      if(added.length>=3)break;
+    }
+    setMustInjected(prev.concat(added));
+    if(box)box.innerHTML+='<div class="hybrid-note-v6">再調整中: '+esc(added.join(' / '))+' を候補に追加し、完成度を再評価しています…</div>';
+    const before=(await get('master_duel_last_deck_v1'))?.generated_at||'';
+    $('buildBtn')?.click();
+    const next=await waitDeck(before);
+    if(!next){setMustInjected(prev);optimizingV6=false;return}
+    const nextScore=postScore(next,ctx.plan);
+    if(nextScore>=baseScore){
+      ctx.deck=next;ctx.engineNames=[...ctx.engineNames,'再調整 '+added.join(' / ')];lastContextV6=ctx;
+      showBuilt(next,ctx.plan,ctx.engineNames,'再調整で '+baseScore+' → '+nextScore+' に改善');
+      if(box)box.innerHTML+='<div class="hybrid-built-v6"><strong>再調整を採用</strong><br>'+baseScore+' → '+nextScore+'/100</div>';
+    }else{
+      setMustInjected(prev);
+      const b2=(await get('master_duel_last_deck_v1'))?.generated_at||'';
+      $('buildBtn')?.click();
+      const reverted=await waitDeck(b2);
+      if(reverted)ctx.deck=reverted;
+      lastContextV6=ctx;
+      showBuilt(ctx.deck,ctx.plan,ctx.engineNames,'再調整案は '+nextScore+' だったため元の '+baseScore+' を維持');
+      if(box)box.innerHTML+='<div class="hybrid-note-v6">再調整案は完成度が下がったため採用せず、元の構築を維持しました。</div>';
+    }
+    optimizingV6=false;
+  }
+
+  function showBuilt(deck,plan,engineNames,optNote=''){
+    const box=$('hybridAnalysisV6');if(!box||!deck)return;const score=postScore(deck,plan);box.innerHTML += '<div class="hybrid-built-v6"><strong>混合構築完了</strong><br>構築完成度（混合診断・目安）: <b>'+score+'/100</b><br>混ぜたエンジン: '+esc(engineNames.join(' / ')||'自動')+(optNote?'<br>'+esc(optNote):'')+'<br><button id="hybridOptimizeV6" type="button">完成度を優先して再調整</button><br>※勝率ではなく、初動・妨害・テーマ比率・事故札・テーマ間相性を見た内部診断です。</div>';
   }
 
   async function buildHybrid(){
@@ -209,7 +278,7 @@
     if($('profileSelect')){const txt=plan.text;const p=/後攻|ワンキル|OTK|捲り|まくり/i.test(txt)?'second':/先攻|妨害|制圧|ロック/i.test(txt)?'first':'competitive';$('profileSelect').value=p;$('profileSelect').dispatchEvent(new Event('change',{bubbles:true}))}
     if($('mainSize')&&!/60枚|芝刈り/i.test(plan.text))$('mainSize').value='40';if($('extraSize'))$('extraSize').value='15';
     const before=(await get('master_duel_last_deck_v1'))?.generated_at||'';
-    $('buildBtn')?.click();const deck=await waitDeck(before);if(deck){showBuilt(deck,plan,engineNames);if(innerWidth<=980)$('mobileTabResult')?.click();}
+    $('buildBtn')?.click();const deck=await waitDeck(before);if(deck){lastContextV6={plan,cs,engineNames,deck};showBuilt(deck,plan,engineNames);const ob=$('hybridOptimizeV6');if(ob)ob.onclick=()=>optimizeHybridV6(lastContextV6);if(innerWidth<=980)$('mobileTabResult')?.click();}
   }
 
   function create(){
@@ -218,6 +287,7 @@
     const area=$('strategyInputV5');area.parentNode.insertBefore(sec,area.nextSibling);
     const opts=optionThemes();selectOptions($('hybridPrimaryV6'),opts,'自動判定');selectOptions($('hybridSecondV6'),opts,'自動判定');selectOptions($('hybridThirdV6'),opts,'なし / 自動');
     $('hybridAnalyzeV6').onclick=analyzeHybrid;$('hybridBuildV6').onclick=buildHybrid;
+    document.addEventListener('click',e=>{if(e.target?.id!=='hybridOptimizeV6')return;e.preventDefault();optimizeHybridV6(lastContextV6)});
     document.addEventListener('click',e=>{if(e.target?.id!=='strategyBuildV5')return;const text=$('strategyInputV5')?.value||'',themes=detectPlanFromUI(text);if(themes.length>=2){e.preventDefault();e.stopImmediatePropagation();buildHybrid();}},true);
     try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(v){$('hybridExperimentalV6').checked=!!v.experimental;$('hybridRatioV6').value=v.mode||'balanced';}}
     catch{}
