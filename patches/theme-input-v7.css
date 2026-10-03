@@ -1,0 +1,8 @@
+.theme-dual-v7,.hybrid-text-v7{margin-top:7px}
+.theme-dual-label-v7,.hybrid-text-label-v7{display:block;font-size:12px;color:var(--muted,#aebbd0);margin-bottom:4px}
+.theme-dual-v7 input,.hybrid-text-v7 input{width:100%;box-sizing:border-box}
+.theme-status-v7{font-size:11px;margin-top:4px;line-height:1.35;min-height:0}
+.theme-ok-v7{color:#78dca8}.theme-warn-v7{color:#e8ba66}
+.theme-dual-help-v7{margin:0 0 10px;padding:9px 10px;border-left:3px solid #6eb8ff;background:rgba(61,132,199,.12);font-size:12px;line-height:1.5}
+.hybrid-grid-v6 .hybrid-text-v7{margin-top:2px}
+@media(max-width:980px){.theme-dual-v7 input,.hybrid-text-v7 input{font-size:16px}.theme-dual-help-v7{font-size:12px}}
