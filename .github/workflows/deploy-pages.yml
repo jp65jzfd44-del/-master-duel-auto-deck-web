@@ -53,6 +53,11 @@ jobs:
           python3 /tmp/pwa_patch_v3.py _site
           node --check _site/app.js
 
+      - name: Refresh PWA cache version
+        run: |
+          set -euxo pipefail
+          sed -i "s/md-auto-deck-pwa-v1/md-auto-deck-pwa-v3/g" _site/sw.js
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
