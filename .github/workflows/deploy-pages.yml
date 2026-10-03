@@ -133,7 +133,7 @@ jobs:
           from pathlib import Path
           p=Path('_site/sw.js')
           s=p.read_text(encoding='utf-8')
-          additions=["'./guide-v4.css'","'./guide-v4.js'","'./strategy-v5.css'","'./strategy-v5.js'","'./strategy-v5-score.js'"]
+          additions=["'./guide-v4.css'","'./guide-v4.js'","'./strategy-v5.css'","'./strategy-v5.js'","'./strategy-v5-score.js'","'./hybrid-v6.css'","'./hybrid-v6.js'"]
           anchor="'./default-regulation.json', './manifest.webmanifest', './icon.svg'"
           if anchor in s:
               extra=', '.join(x for x in additions if x not in s)
@@ -143,6 +143,7 @@ jobs:
           PY
           grep "const CACHE" _site/sw.js
           grep "strategy-v5" _site/sw.js
+          grep "hybrid-v6" _site/sw.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
