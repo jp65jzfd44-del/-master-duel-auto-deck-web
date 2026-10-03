@@ -60,8 +60,7 @@
     if(!box){box=document.createElement('section');box.id='strategyGuideV5';box.className='analysis-box strategy-guide-v5';const g=s.querySelector('.md-guide-grid-v4');g?s.insertBefore(box,g):s.appendChild(box)}
     const have=new Set([...(deck?.main||[]),...(deck?.extra||[])].map(e=>String(e.card?.id)));
     const req=a.required.map(c=>label(c)+(have.has(String(c.id))?' ✓':'（未採用）')).join(' / ')||'自動選定';
-    let steps;
-    if(a.isCharm)steps=[
+    const steps=a.isCharm?[
       '1. ミミグルを相手フィールドへ裏側で送り、表側になる状況を作る。',
       '2. 《ミミグル・チャーム》を維持し、相手側ミミグルが表側になるたび相手EXデッキへ干渉する。',
       '3. チャームは相手EXの裏側カードをランダム選択し、特殊召喚可能なら自分の場へ出し、できなければ除外する。狙い撃ちではない。',
