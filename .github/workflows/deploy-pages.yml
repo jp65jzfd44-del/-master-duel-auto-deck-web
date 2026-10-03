@@ -38,6 +38,13 @@ jobs:
           cp -R _src/MasterDuelAutoDeck_PWA_v1/. _site/
           rm -f _site/README_PWA_JA.txt _site/SOURCES.txt
 
+      - name: Apply quality v2 patch
+        run: |
+          set -euxo pipefail
+          cat patches/v2-*.b64 | tr -d '\n\r' | base64 --decode | gunzip > /tmp/pwa_patch_v2.py
+          python3 /tmp/pwa_patch_v2.py _site
+          node --check _site/app.js
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
