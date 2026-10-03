@@ -5,6 +5,7 @@
   const INJECT_KEY = 'md_hybrid_injected_v6';
   let lastContextV6=null;
   let optimizingV6=false;
+  let hybridInternalBuildV6=false;
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm = s => String(s || '').normalize('NFKC').toLowerCase().replace(/[\s・･ー―‐\-–—_.,，。!！?？「」『』()（）【】\[\]<>＜＞:：/／\\]/g, '');
 
@@ -37,6 +38,11 @@
   }
   function canonicalTheme(name){
     if(!name) return '';
+    name=String(name).trim();
+    for(const [re,v] of ALIASES){
+      re.lastIndex=0;
+      if(re.test(name)){ name=v; break; }
+    }
     const n=norm(name), opts=optionThemes();
     let hit=opts.find(o=>norm(o.value)===n || norm(o.label)===n);
     if(hit) return hit.value;
@@ -183,6 +189,11 @@
   }
 
   async function waitDeck(before,timeout=12000){for(let i=0;i<Math.ceil(timeout/250);i++){await new Promise(r=>setTimeout(r,250));const d=await get('master_duel_last_deck_v1');if(d&&d.generated_at&&d.generated_at!==before)return d}return null}
+  function clickBaseBuildV6(){
+    const b=$('buildBtn'); if(!b)return;
+    hybridInternalBuildV6=true;
+    try{ b.click(); } finally { hybridInternalBuildV6=false; }
+  }
   function roleCount(entries,re){return (entries||[]).reduce((s,e)=>s+(re.test(String(e.card?.desc||''))?e.qty:0),0)}
   function postScore(deck,plan){
     const main=deck?.main||[];const n=main.reduce((s,e)=>s+e.qty,0)||1;let mixed=0;for(const e of main)if(plan.themes.includes(e.card?.archetype))mixed+=e.qty;
@@ -237,7 +248,7 @@
     setMustInjected(prev.concat(added));
     if(box)box.innerHTML+='<div class="hybrid-note-v6">再調整中: '+esc(added.join(' / '))+' を候補に追加し、完成度を再評価しています…</div>';
     const before=(await get('master_duel_last_deck_v1'))?.generated_at||'';
-    $('buildBtn')?.click();
+    clickBaseBuildV6();
     const next=await waitDeck(before);
     if(!next){setMustInjected(prev);optimizingV6=false;return}
     const nextScore=postScore(next,ctx.plan);
@@ -248,7 +259,7 @@
     }else{
       setMustInjected(prev);
       const b2=(await get('master_duel_last_deck_v1'))?.generated_at||'';
-      $('buildBtn')?.click();
+      clickBaseBuildV6();
       const reverted=await waitDeck(b2);
       if(reverted)ctx.deck=reverted;
       lastContextV6=ctx;
@@ -278,17 +289,27 @@
     if($('profileSelect')){const txt=plan.text;const p=/後攻|ワンキル|OTK|捲り|まくり/i.test(txt)?'second':/先攻|妨害|制圧|ロック/i.test(txt)?'first':'competitive';$('profileSelect').value=p;$('profileSelect').dispatchEvent(new Event('change',{bubbles:true}))}
     if($('mainSize')&&!/60枚|芝刈り/i.test(plan.text))$('mainSize').value='40';if($('extraSize'))$('extraSize').value='15';
     const before=(await get('master_duel_last_deck_v1'))?.generated_at||'';
-    $('buildBtn')?.click();const deck=await waitDeck(before);if(deck){lastContextV6={plan,cs,engineNames,deck};showBuilt(deck,plan,engineNames);const ob=$('hybridOptimizeV6');if(ob)ob.onclick=()=>optimizeHybridV6(lastContextV6);if(innerWidth<=980)$('mobileTabResult')?.click();}
+    clickBaseBuildV6();const deck=await waitDeck(before);if(deck){lastContextV6={plan,cs,engineNames,deck};showBuilt(deck,plan,engineNames);const ob=$('hybridOptimizeV6');if(ob)ob.onclick=()=>optimizeHybridV6(lastContextV6);if(innerWidth<=980)$('mobileTabResult')?.click();}
   }
 
   function create(){
     const host=$('strategyBuilderV5');if(!host||$('hybridBuilderV6'))return false;
-    const sec=document.createElement('div');sec.id='hybridBuilderV6';sec.className='hybrid-builder-v6';sec.innerHTML='<div class="hybrid-head-v6"><strong>混合テーマ / 変則構築</strong><span>v6</span></div><p class="hint">文章から複数テーマを自動検出します。珍しい組み合わせは、小型エンジン化・事故札抑制・共通ギミック優先で組みます。</p><div class="hybrid-grid-v6"><label>主軸テーマ<select id="hybridPrimaryV6"></select></label><label>混ぜるテーマ①<select id="hybridSecondV6"></select></label><label>混ぜるテーマ②<select id="hybridThirdV6"></select></label><label>混合比率<select id="hybridRatioV6"><option value="compact">主軸75 / 混合25</option><option value="balanced" selected>主軸65 / 混合35</option><option value="equal">主軸55 / 混合45</option><option value="deep">ギミック深め</option></select></label></div><label class="hybrid-check-v6"><input id="hybridExperimentalV6" type="checkbox"> 珍しい組み合わせも許可（相性が低くても、成立する最小エンジンを探す）</label><div class="button-row"><button id="hybridAnalyzeV6" type="button">混合相性を解析</button><button id="hybridBuildV6" class="primary" type="button">混合戦術で構築</button></div><div id="hybridAnalysisV6" class="hybrid-analysis-v6">例：「ミミグルとヘカトンケイルで相手のカードを奪うデッキ」のように戦術欄へ書けます。</div>';
+    const sec=document.createElement('div');sec.id='hybridBuilderV6';sec.className='hybrid-builder-v6';sec.innerHTML='<div class="hybrid-head-v6"><strong>混合テーマ / 変則構築</strong><span>v9</span></div><p class="hint">文章から複数テーマを自動検出します。テーマを2つ以上指定した場合は、通常の「デッキを構築」ボタンでも混合構築として処理します。珍しい組み合わせは、小型エンジン化・事故札抑制・共通ギミック優先で組みます。</p><div class="hybrid-grid-v6"><label>主軸テーマ<select id="hybridPrimaryV6"></select></label><label>混ぜるテーマ①<select id="hybridSecondV6"></select></label><label>混ぜるテーマ②<select id="hybridThirdV6"></select></label><label>混合比率<select id="hybridRatioV6"><option value="compact">主軸75 / 混合25</option><option value="balanced" selected>主軸65 / 混合35</option><option value="equal">主軸55 / 混合45</option><option value="deep">ギミック深め</option></select></label></div><label class="hybrid-check-v6"><input id="hybridExperimentalV6" type="checkbox"> 珍しい組み合わせも許可（相性が低くても、成立する最小エンジンを探す）</label><div class="button-row"><button id="hybridAnalyzeV6" type="button">混合相性を解析</button><button id="hybridBuildV6" class="primary" type="button">混合戦術で構築</button></div><div id="hybridAnalysisV6" class="hybrid-analysis-v6">例：「ミミグルとヘカトンケイルで相手のカードを奪うデッキ」のように戦術欄へ書けます。</div>';
     const area=$('strategyInputV5');area.parentNode.insertBefore(sec,area.nextSibling);
     const opts=optionThemes();selectOptions($('hybridPrimaryV6'),opts,'自動判定');selectOptions($('hybridSecondV6'),opts,'自動判定');selectOptions($('hybridThirdV6'),opts,'なし / 自動');
     $('hybridAnalyzeV6').onclick=analyzeHybrid;$('hybridBuildV6').onclick=buildHybrid;
     document.addEventListener('click',e=>{if(e.target?.id!=='hybridOptimizeV6')return;e.preventDefault();optimizeHybridV6(lastContextV6)});
     document.addEventListener('click',e=>{if(e.target?.id!=='strategyBuildV5')return;const text=$('strategyInputV5')?.value||'',themes=detectPlanFromUI(text);if(themes.length>=2){e.preventDefault();e.stopImmediatePropagation();buildHybrid();}},true);
+    document.addEventListener('click',e=>{
+      if(e.target?.id!=='buildBtn'||hybridInternalBuildV6)return;
+      const text=$('strategyInputV5')?.value||'';
+      const themes=detectPlanFromUI(text);
+      if(themes.length>=2){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        buildHybrid();
+      }
+    },true);
     try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(v){$('hybridExperimentalV6').checked=!!v.experimental;$('hybridRatioV6').value=v.mode||'balanced';}}
     catch{}
     return true;
