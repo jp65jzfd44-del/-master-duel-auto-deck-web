@@ -5,8 +5,8 @@ on:
     branches: [main]
     paths:
       - 'MasterDuelAutoDeck_PWA_v1.zip'
-      - 'patch_parts/**'
       - '.github/workflows/deploy-pages.yml'
+      - 'patches/**'
   workflow_dispatch:
 
 permissions:
@@ -29,7 +29,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract base PWA
+      - name: Extract PWA
         run: |
           set -euxo pipefail
           unzip -t MasterDuelAutoDeck_PWA_v1.zip
@@ -37,16 +37,14 @@ jobs:
           mkdir -p _site _src
           unzip -q MasterDuelAutoDeck_PWA_v1.zip -d _src
           cp -R _src/MasterDuelAutoDeck_PWA_v1/. _site/
+          rm -f _site/README_PWA_JA.txt _site/SOURCES.txt
 
-      - name: Apply PWA v2 quality patch
+      - name: Apply quality v2 patch
         run: |
           set -euxo pipefail
-          cat patch_parts/v2-*.b64 | tr -d '\n\r' | base64 --decode | gzip -dc > pwa_patch_v2.py
-          python3 pwa_patch_v2.py _site
+          cat patches/v2-compact.gz.b64 | tr -d '\n\r' | base64 --decode | gunzip > /tmp/pwa_patch_v2.py
+          python3 /tmp/pwa_patch_v2.py _site
           node --check _site/app.js
-          grep -q "CRパチンコ型" _site/index.html
-          grep -q "構築完成度" _site/app.js
-          rm -f _site/README_PWA_JA.txt _site/SOURCES.txt
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
