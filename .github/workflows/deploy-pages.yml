@@ -87,21 +87,45 @@ jobs:
           p.write_text(s,encoding='utf-8')
           PY
 
+      - name: Apply strategy scoring v5
+        run: |
+          set -euxo pipefail
+          rm -rf /tmp/strategy-v5-deep
+          mkdir -p /tmp/strategy-v5-deep
+          cat patches/strategy-v5-deep.tgz.b64 | tr -d '\n\r' | base64 --decode > /tmp/strategy-v5-deep.tgz
+          tar -xzf /tmp/strategy-v5-deep.tgz -C /tmp/strategy-v5-deep
+          python3 /tmp/strategy-v5-deep/patch_app_strategy_integration_v5.py _site
+          cp /tmp/strategy-v5-deep/strategy-v5-score.js _site/strategy-v5-score.js
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('_site/index.html')
+          s=p.read_text(encoding='utf-8')
+          if 'strategy-v5-score.js' not in s:
+              s=s.replace('<script src="strategy-v5.js"></script>','<script src="strategy-v5.js"></script>\n  <script src="strategy-v5-score.js"></script>')
+          p.write_text(s,encoding='utf-8')
+          PY
+          node --check _site/app.js
+          node --check _site/strategy-v5.js
+          node --check _site/strategy-v5-score.js
+
       - name: Refresh PWA cache version
         run: |
           set -euxo pipefail
-          sed -i 's/md-auto-deck-pwa-v[0-9][0-9]*/md-auto-deck-pwa-v5/g' _site/sw.js
+          sed -i 's/md-auto-deck-pwa-v[0-9][0-9]*/md-auto-deck-pwa-v6/g' _site/sw.js
           python3 - <<'PY'
           from pathlib import Path
           p=Path('_site/sw.js')
           s=p.read_text(encoding='utf-8')
-          if "'./guide-v4.css'" not in s:
-              s=s.replace("'./default-regulation.json', './manifest.webmanifest', './icon.svg'",
-                          "'./default-regulation.json', './manifest.webmanifest', './icon.svg', './guide-v4.css', './guide-v4.js', './strategy-v5.css', './strategy-v5.js'")
+          additions=["'./guide-v4.css'","'./guide-v4.js'","'./strategy-v5.css'","'./strategy-v5.js'","'./strategy-v5-score.js'"]
+          anchor="'./default-regulation.json', './manifest.webmanifest', './icon.svg'"
+          if anchor in s:
+              extra=', '.join(x for x in additions if x not in s)
+              if extra:
+                  s=s.replace(anchor, anchor+', '+extra)
           p.write_text(s,encoding='utf-8')
           PY
           grep "const CACHE" _site/sw.js
-          grep "guide-v4" _site/sw.js
+          grep "strategy-v5" _site/sw.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
