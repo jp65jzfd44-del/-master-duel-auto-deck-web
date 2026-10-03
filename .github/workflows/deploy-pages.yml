@@ -111,6 +111,13 @@ jobs:
       - name: Add hybrid builder v6
         run: |
           set -euxo pipefail
+          rm -rf /tmp/hybrid-v6-core
+          mkdir -p /tmp/hybrid-v6-core
+          cat patches/hybrid-v6.bundle.tgz.b64 | tr -d '\n\r' | base64 --decode > /tmp/hybrid-v6-core.tgz
+          tar -xzf /tmp/hybrid-v6-core.tgz -C /tmp/hybrid-v6-core
+          python3 /tmp/hybrid-v6-core/patch.py _site
+          node --check _site/app.js
+          node --check _site/guide-v4.js
           cp patches/hybrid-v6.js _site/hybrid-v6.js
           cp patches/hybrid-v6.css _site/hybrid-v6.css
           node --check _site/hybrid-v6.js
