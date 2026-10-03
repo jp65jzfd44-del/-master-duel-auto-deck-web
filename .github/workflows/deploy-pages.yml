@@ -125,38 +125,24 @@ jobs:
           p.write_text(s,encoding='utf-8')
           PY
 
-      - name: Add editable theme inputs v7
+      - name: Apply fixed theme inputs v8
         run: |
           set -euxo pipefail
-          cp patches/theme-input-v7.js _site/theme-input-v7.js
-          cp patches/theme-input-v7.css _site/theme-input-v7.css
-          node --check _site/theme-input-v7.js
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('_site/index.html')
-          s=p.read_text(encoding='utf-8')
-          if 'theme-input-v7.css' not in s:
-              if 'hybrid-v6.css' in s:
-                  s=s.replace('<link rel="stylesheet" href="hybrid-v6.css" />','<link rel="stylesheet" href="hybrid-v6.css" />\n  <link rel="stylesheet" href="theme-input-v7.css" />')
-              else:
-                  s=s.replace('</head>','  <link rel="stylesheet" href="theme-input-v7.css" />\n</head>')
-          if 'theme-input-v7.js' not in s:
-              if 'hybrid-v6.js' in s:
-                  s=s.replace('<script src="hybrid-v6.js"></script>','<script src="hybrid-v6.js"></script>\n  <script src="theme-input-v7.js"></script>')
-              else:
-                  s=s.replace('</body>','  <script src="theme-input-v7.js"></script>\n</body>')
-          p.write_text(s,encoding='utf-8')
-          PY
+          python3 patches/theme-input-v8.py _site
+          node --check _site/app.js
+          node --check _site/hybrid-v6.js
+          grep "themeTextV8" _site/index.html
+          grep "hybridPrimaryTextV8" _site/hybrid-v6.js
 
       - name: Refresh PWA cache version
         run: |
           set -euxo pipefail
-          sed -i 's/md-auto-deck-pwa-v[0-9][0-9]*/md-auto-deck-pwa-v7/g' _site/sw.js
+          sed -i 's/md-auto-deck-pwa-v[0-9][0-9]*/md-auto-deck-pwa-v8/g' _site/sw.js
           python3 - <<'PY'
           from pathlib import Path
           p=Path('_site/sw.js')
           s=p.read_text(encoding='utf-8')
-          additions=["'./guide-v4.css'","'./guide-v4.js'","'./strategy-v5.css'","'./strategy-v5.js'","'./strategy-v5-score.js'","'./hybrid-v6.css'","'./hybrid-v6.js'","'./theme-input-v7.css'","'./theme-input-v7.js'"]
+          additions=["'./guide-v4.css'","'./guide-v4.js'","'./strategy-v5.css'","'./strategy-v5.js'","'./strategy-v5-score.js'","'./hybrid-v6.css'","'./hybrid-v6.js'"]
           anchor="'./default-regulation.json', './manifest.webmanifest', './icon.svg'"
           if anchor in s:
               extra=', '.join(x for x in additions if x not in s)
