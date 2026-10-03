@@ -53,15 +53,27 @@ jobs:
           python3 /tmp/pwa_patch_v3.py _site
           node --check _site/app.js
 
+      - name: Add detailed guide v4
+        run: |
+          set -euxo pipefail
+          cp patches/guide-v4.css _site/guide-v4.css
+          cat patches/guide-v4.js.gz.b64 | tr -d '\n\r' | base64 --decode | gunzip > _site/guide-v4.js
+          node --check _site/guide-v4.js
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('_site/index.html')
+          s=p.read_text(encoding='utf-8')
+          if 'guide-v4.css' not in s:
+              s=s.replace('<link rel="stylesheet" href="styles.css" />','<link rel="stylesheet" href="styles.css" />\n  <link rel="stylesheet" href="guide-v4.css" />')
+          if 'guide-v4.js' not in s:
+              s=s.replace('<script src="app.js"></script>','<script src="app.js"></script>\n  <script src="guide-v4.js"></script>')
+          p.write_text(s,encoding='utf-8')
+          PY
+
       - name: Refresh PWA cache version
         run: |
           set -euxo pipefail
-          sed -i "s/md-auto-deck-pwa-v1/md-auto-deck-pwa-v3/g" _site/sw.js
-
-      - name: Bump PWA cache version
-        run: |
-          set -euxo pipefail
-          sed -i 's/md-auto-deck-pwa-v[0-9][0-9]*/md-auto-deck-pwa-v3/g' _site/sw.js
+          sed -i 's/md-auto-deck-pwa-v[0-9][0-9]*/md-auto-deck-pwa-v4/g' _site/sw.js
           grep "const CACHE" _site/sw.js
 
       - name: Configure GitHub Pages
