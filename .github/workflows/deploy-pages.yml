@@ -46,6 +46,13 @@ jobs:
           python3 /tmp/pwa_patch_v2.py _site
           node --check _site/app.js
 
+      - name: Apply quality v3 patch
+        run: |
+          set -euxo pipefail
+          cat patches/v3-quality.gz.b64 | tr -d '\n\r' | base64 --decode | gunzip > /tmp/pwa_patch_v3.py
+          python3 /tmp/pwa_patch_v3.py _site
+          node --check _site/app.js
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
