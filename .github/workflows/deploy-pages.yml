@@ -108,6 +108,23 @@ jobs:
           node --check _site/strategy-v5.js
           node --check _site/strategy-v5-score.js
 
+      - name: Add hybrid builder v6
+        run: |
+          set -euxo pipefail
+          cp patches/hybrid-v6.js _site/hybrid-v6.js
+          cp patches/hybrid-v6.css _site/hybrid-v6.css
+          node --check _site/hybrid-v6.js
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('_site/index.html')
+          s=p.read_text(encoding='utf-8')
+          if 'hybrid-v6.css' not in s:
+              s=s.replace('<link rel="stylesheet" href="strategy-v5.css" />','<link rel="stylesheet" href="strategy-v5.css" />\n  <link rel="stylesheet" href="hybrid-v6.css" />')
+          if 'hybrid-v6.js' not in s:
+              s=s.replace('<script src="strategy-v5.js"></script>','<script src="strategy-v5.js"></script>\n  <script src="hybrid-v6.js"></script>')
+          p.write_text(s,encoding='utf-8')
+          PY
+
       - name: Refresh PWA cache version
         run: |
           set -euxo pipefail
