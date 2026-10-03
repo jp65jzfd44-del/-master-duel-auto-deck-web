@@ -73,8 +73,8 @@ jobs:
       - name: Add strategy builder v5
         run: |
           set -euxo pipefail
-          cat patches/strategy-v5-js-*.b64 | tr -d '\n\r' | base64 --decode | gunzip > _site/strategy-v5.js
-          cat patches/strategy-v5.css.gz.b64 | tr -d '\n\r' | base64 --decode | gunzip > _site/strategy-v5.css
+          cp patches/strategy-v5.js _site/strategy-v5.js
+          cp patches/strategy-v5.css _site/strategy-v5.css
           node --check _site/strategy-v5.js
           python3 - <<'PY'
           from pathlib import Path
