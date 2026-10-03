@@ -160,45 +160,10 @@ jobs:
                   s=s.replace(anchor, anchor+', '+extra)
           p.write_text(s,encoding='utf-8')
           PY
+          python3 patches/cache-v10.py _site
           grep "const CACHE" _site/sw.js
-          grep "strategy-v5" _site/sw.js
-          grep "hybrid-v6" _site/sw.js
-          # cache-bust-v10: old Safari service workers must not serve stale JS/CSS
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('_site/index.html')
-          s=p.read_text(encoding='utf-8')
-          for name in ['styles.css','app.js','guide-v4.css','guide-v4.js','strategy-v5.css','strategy-v5.js','strategy-v5-score.js','hybrid-v6.css','hybrid-v6.js']:
-              s=s.replace(f'"{name}"', f'"{name}?v=10"')
-          p.write_text(s,encoding='utf-8')
-
-          p=Path('_site/sw.js')
-          s=p.read_text(encoding='utf-8')
-          # Replace local-origin cache-first handler with network-first so future updates appear immediately.
-          start="if (url.origin === self.location.origin) {"
-          i=s.find(start)
-          if i!=-1:
-              # Keep prefix up to local origin branch and replace branch body through its matching tail.
-              old="""if (url.origin === self.location.origin) {
-    event.respondWith(caches.match(req).then((cached) => cached || fetch(req).then((res) => {
-      const copy = res.clone();
-      caches.open(CACHE).then((c) => c.put(req, copy));
-      return res;
-    }).catch(() => caches.match('./index.html'))));
-  }"""
-              new="""if (url.origin === self.location.origin) {
-    event.respondWith(fetch(req).then((res) => {
-      const copy = res.clone();
-      caches.open(CACHE).then((c) => c.put(req, copy));
-      return res;
-    }).catch(() => caches.match(req).then((cached) => cached || caches.match('./index.html'))));
-  }"""
-              if old in s:
-                  s=s.replace(old,new)
-          p.write_text(s,encoding='utf-8')
-          PY
           grep "?v=10" _site/index.html
-
+          grep "v10" _site/hybrid-v6.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
