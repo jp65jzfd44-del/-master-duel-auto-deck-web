@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'pwa_parts/**'
+      - 'MasterDuelAutoDeck_PWA_v1.zip'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
@@ -28,10 +28,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Rebuild and extract PWA
+      - name: Extract PWA
         run: |
           set -euxo pipefail
-          cat pwa_parts/part-*.txt | tr -d '\n\r' | base64 --decode > MasterDuelAutoDeck_PWA_v1.zip
           unzip -t MasterDuelAutoDeck_PWA_v1.zip
           rm -rf _site _src
           mkdir -p _site _src
@@ -41,8 +40,6 @@ jobs:
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
