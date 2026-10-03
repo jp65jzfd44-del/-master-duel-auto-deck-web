@@ -6,6 +6,7 @@ on:
     paths:
       - 'MasterDuelAutoDeck_PWA_v1.zip'
       - '.github/workflows/deploy-pages.yml'
+      - 'patches/**'
   workflow_dispatch:
 
 permissions:
@@ -41,7 +42,7 @@ jobs:
       - name: Apply quality v2 patch
         run: |
           set -euxo pipefail
-          cat patches/v2-*.b64 | tr -d '\n\r' | base64 --decode | gunzip > /tmp/pwa_patch_v2.py
+          cat patches/v2-compact.gz.b64 | tr -d '\n\r' | base64 --decode | gunzip > /tmp/pwa_patch_v2.py
           python3 /tmp/pwa_patch_v2.py _site
           node --check _site/app.js
 
