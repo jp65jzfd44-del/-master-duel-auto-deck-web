@@ -70,17 +70,34 @@ jobs:
           p.write_text(s,encoding='utf-8')
           PY
 
+      - name: Add strategy builder v5
+        run: |
+          set -euxo pipefail
+          cat patches/strategy-v5.js.gz.b64 | tr -d '\n\r' | base64 --decode | gunzip > _site/strategy-v5.js
+          cat patches/strategy-v5.css.gz.b64 | tr -d '\n\r' | base64 --decode | gunzip > _site/strategy-v5.css
+          node --check _site/strategy-v5.js
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('_site/index.html')
+          s=p.read_text(encoding='utf-8')
+          if 'strategy-v5.css' not in s:
+              s=s.replace('<link rel="stylesheet" href="guide-v4.css" />','<link rel="stylesheet" href="guide-v4.css" />\n  <link rel="stylesheet" href="strategy-v5.css" />')
+          if 'strategy-v5.js' not in s:
+              s=s.replace('<script src="guide-v4.js"></script>','<script src="guide-v4.js"></script>\n  <script src="strategy-v5.js"></script>')
+          p.write_text(s,encoding='utf-8')
+          PY
+
       - name: Refresh PWA cache version
         run: |
           set -euxo pipefail
-          sed -i 's/md-auto-deck-pwa-v[0-9][0-9]*/md-auto-deck-pwa-v4/g' _site/sw.js
+          sed -i 's/md-auto-deck-pwa-v[0-9][0-9]*/md-auto-deck-pwa-v5/g' _site/sw.js
           python3 - <<'PY'
           from pathlib import Path
           p=Path('_site/sw.js')
           s=p.read_text(encoding='utf-8')
           if "'./guide-v4.css'" not in s:
               s=s.replace("'./default-regulation.json', './manifest.webmanifest', './icon.svg'",
-                          "'./default-regulation.json', './manifest.webmanifest', './icon.svg', './guide-v4.css', './guide-v4.js'")
+                          "'./default-regulation.json', './manifest.webmanifest', './icon.svg', './guide-v4.css', './guide-v4.js', './strategy-v5.css', './strategy-v5.js'")
           p.write_text(s,encoding='utf-8')
           PY
           grep "const CACHE" _site/sw.js
