@@ -57,7 +57,7 @@ jobs:
         run: |
           set -euxo pipefail
           cp patches/guide-v4.css _site/guide-v4.css
-          cat patches/guide-v4.js.gz.b64 | tr -d '\n\r' | base64 --decode | gunzip > _site/guide-v4.js
+          cat patches/guide-v4-*.b64 | tr -d '\n\r' | base64 --decode | gunzip > _site/guide-v4.js
           node --check _site/guide-v4.js
           python3 - <<'PY'
           from pathlib import Path
